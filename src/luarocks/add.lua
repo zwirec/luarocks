@@ -95,7 +95,11 @@ local function add_files_to_server(refresh, rockfiles, server, upload_server)
    return true
 end
 
-function run(...)
+--- Driver function for "add" command.
+-- @param lr table: LuaRocks context object.
+function run(lr, ...)
+   cfg.assert_lr(lr)
+
    local files = { util.parse_flags(...) }
    local flags = table.remove(files, 1)
    if #files < 1 then

@@ -2,6 +2,7 @@
 --- Functions for command-line scripts.
 module("luarocks.command_line", package.seeall)
 
+local luarocks = require("luarocks")
 local util = require("luarocks.util")
 local cfg = require("luarocks.cfg")
 local fs = require("luarocks.fs")
@@ -39,8 +40,13 @@ end
 -- to it any additional arguments passed by the user.
 -- Uses the global table "commands", which contains
 -- the loaded modules representing commands.
+-- @param program_name string: The program name to be shown on help screens
+-- @param program_description string: A short, one-line description of
+-- the program for help purposes.
+-- @param commands table: A table mapping command names (strings) to
+-- command modules (tables loaded with require()).
 -- @param ... string: Arguments given on the command-line.
-function run_command(...)
+function run_command(program_name, program_description, commands, ...)
    local args = {...}
    local cmdline_vars = {}
    for i = #args, 1, -1 do
@@ -147,8 +153,10 @@ function run_command(...)
       end
    end
    
+   local lr = luarocks.new()
+   
    if commands[command] then
-      local xp, ok, err = xpcall(function() return commands[command].run(unpack(args)) end, function(err)
+      local xp, ok, err = xpcall(function() return commands[command].run(lr, unpack(args)) end, function(err)
          die(debug.traceback("LuaRocks "..cfg.program_version
             .." bug (please report at luarocks-developers@lists.sourceforge.net).\n"
             ..err, 2))

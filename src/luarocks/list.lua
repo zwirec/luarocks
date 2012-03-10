@@ -15,10 +15,13 @@ help = [[
 ]]
 
 --- Driver function for "list" command.
+-- @param lr table: LuaRocks context object.
 -- @param filter string or nil: A substring of a rock name to filter by.
 -- @param version string or nil: a version may also be passed.
 -- @return boolean: True if succeeded, nil on errors.
-function run(...)
+function run(lr, ...)
+   cfg.assert_lr(lr)
+   
    local flags, filter, version = util.parse_flags(...)
    local results = {}
    local query = search.make_query(filter and filter:lower() or "", version)

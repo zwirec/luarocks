@@ -15,11 +15,13 @@ help = [[
 ]]
 
 --- Driver function for "make_manifest" command.
+-- @param lr table: LuaRocks context object.
 -- @param repo string or nil: Pathname of a local repository. If not given,
 -- the default local repository configured as cfg.rocks_dir is used.
 -- @return boolean or (nil, string): True if manifest was generated,
 -- or nil and an error message.
-function run(repo)
+function run(lr, repo)
+   cfg.assert_lr(lr)
    assert(type(repo) == "string" or not repo)
    repo = repo or cfg.rocks_dir
   

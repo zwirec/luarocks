@@ -22,10 +22,11 @@ or a filename of a locally available rock.
 ]]
 
 --- Install a binary rock.
+-- @param lr table: LuaRocks context object.
 -- @param rock_file string: local or remote filename of a rock.
 -- @return boolean or (nil, string, [string]): True if succeeded or 
 -- nil and an error message and an optional error code.
-function install_binary_rock(rock_file)
+function install_binary_rock(lr, rock_file)
    assert(type(rock_file) == "string")
 
    local name, version, arch = path.parse_name(rock_file)
@@ -62,7 +63,7 @@ function install_binary_rock(rock_file)
       if err then return nil, err end
    end
 
-   ok, err, errcode = deps.fulfill_dependencies(rockspec)
+   ok, err, errcode = deps.fulfill_dependencies(lr, rockspec)
    if err then return nil, err, errcode end
 
    local wrap_bin_scripts = true
@@ -98,6 +99,7 @@ function install_binary_rock(rock_file)
 end
 
 --- Driver function for the "install" command.
+-- @param lr table: LuaRocks context object.
 -- @param name string: name of a binary rock. If an URL or pathname
 -- to a binary rock is given, fetches and installs it. If a rockspec or a
 -- source rock is given, forwards the request to the "build" command.
@@ -107,7 +109,8 @@ end
 -- may also be given.
 -- @return boolean or (nil, string): True if installation was
 -- successful, nil and an error message otherwise.
-function run(...)
+function run(lr, ...)
+   cfg.assert_lr(lr)
    local flags, name, version = util.parse_flags(...)
    if type(name) ~= "string" then
       return nil, "Argument missing, see help."
@@ -119,9 +122,9 @@ function run(...)
    if name:match("%.rockspec$") or name:match("%.src%.rock$") then
       util.printout("Using "..name.."... switching to 'build' mode")
       local build = require("luarocks.build")
-      return build.run(name, flags["local"] and "--local")
+      return build.run(lr, name, flags["local"] and "--local")
    elseif name:match("%.rock$") then
-      return install_binary_rock(name)
+      return install_binary_rock(lr, name)
    else
       local search = require("luarocks.search")
       local results, err = search.find_suitable_rock(search.make_query(name:lower(), version))
@@ -130,7 +133,7 @@ function run(...)
       elseif type(results) == "string" then
          local url = results
          util.printout("Installing "..url.."...")
-         return run(url)
+         return run(lr, url)
       else
          util.printout()
          util.printerr("Could not determine which rock to install.")

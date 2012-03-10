@@ -3,6 +3,7 @@
 -- Download a rock from the repository.
 module("luarocks.download", package.seeall)
 
+local cfg = require("luarocks.cfg")
 local util = require("luarocks.util")
 local path = require("luarocks.path")
 local fetch = require("luarocks.fetch")
@@ -24,12 +25,14 @@ local function download(rock_file)
 end
 
 --- Driver function for the "download" command.
+-- @param lr table: LuaRocks context object.
 -- @param name string: a rock name.
 -- @param version string or nil: if the name of a package is given, a
 -- version may also be passed.
 -- @return boolean or (nil, string): true if successful or nil followed
 -- by an error message.
-function run(...)
+function run(lr, ...)
+   cfg.assert_lr(lr)
    local flags, name, version = util.parse_flags(...)
 
    assert(type(version) == "string" or not version)

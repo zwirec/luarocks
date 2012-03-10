@@ -105,6 +105,7 @@ function apply_patches(rockspec)
 end
 
 --- Build and install a rock given a rockspec.
+-- @param lr table: LuaRocks context object.
 -- @param rockspec_file string: local or remote filename of a rockspec.
 -- @param need_to_fetch boolean: true if sources need to be fetched,
 -- false if the rockspec was obtained from inside a source rock.
@@ -113,7 +114,7 @@ end
 -- need_to_fetch = false.
 -- @return boolean or (nil, string, [string]): True if succeeded or 
 -- nil and an error message followed by an error code.
-function build_rockspec(rockspec_file, need_to_fetch, minimal_mode)
+function build_rockspec(lr, rockspec_file, need_to_fetch, minimal_mode)
    assert(type(rockspec_file) == "string")
    assert(type(need_to_fetch) == "boolean")
 
@@ -126,7 +127,7 @@ function build_rockspec(rockspec_file, need_to_fetch, minimal_mode)
       return nil, "Rockspec error: build type not specified"
    end
 
-   local ok, err, errcode = deps.fulfill_dependencies(rockspec)
+   local ok, err, errcode = deps.fulfill_dependencies(lr, rockspec)
    if err then
       return nil, err, errcode
    end
@@ -267,7 +268,7 @@ end
 -- false if the rockspec was obtained from inside a source rock.
 -- @return boolean or (nil, string, [string]): True if build was successful,
 -- or false and an error message and an optional error code.
-function build_rock(rock_file, need_to_fetch)
+function build_rock(lr, rock_file, need_to_fetch)
    assert(type(rock_file) == "string")
    assert(type(need_to_fetch) == "boolean")
   
@@ -277,29 +278,30 @@ function build_rock(rock_file, need_to_fetch)
    end
    local rockspec_file = path.rockspec_name_from_rock(rock_file)
    fs.change_dir(unpack_dir)
-   local ok, err, errcode = build_rockspec(rockspec_file, need_to_fetch)
+   local ok, err, errcode = build_rockspec(lr, rockspec_file, need_to_fetch)
    fs.pop_dir()
    return ok, err, errcode
 end
 
-local function do_build(name, version)
+local function do_build(lr, name, version)
    if name:match("%.rockspec$") then
-      return build_rockspec(name, true)
+      return build_rockspec(lr, name, true)
    elseif name:match("%.src%.rock$") then
-      return build_rock(name, false)
+      return build_rock(lr, name, false)
    elseif name:match("%.all%.rock$") then
       local install = require("luarocks.install")
       return install.install_binary_rock(name)
    elseif name:match("%.rock$") then
-      return build_rock(name, true)
+      return build_rock(lr, name, true)
    elseif not name:match(dir.separator) then
       local search = require("luarocks.search")
-      return search.act_on_src_or_rockspec(run, name:lower(), version)
+      return search.act_on_src_or_rockspec(lr, run, name:lower(), version)
    end
    return nil, "Don't know what to do with "..name
 end
 
 --- Driver function for "build" command.
+-- @param lr table: LuaRocks context object.
 -- @param name string: A local or remote rockspec or rock file.
 -- If a package name is given, forwards the request to "search" and,
 -- if returned a result, installs the matching rock.
@@ -307,7 +309,8 @@ end
 -- also be given.
 -- @return boolean or (nil, string): True if build was successful; nil and an
 -- error message otherwise.
-function run(...)
+function run(lr, ...)
+   cfg.assert_lr(lr)
    local flags, name, version = util.parse_flags(...)
    if type(name) ~= "string" then
       return nil, "Argument missing, see help."
@@ -315,10 +318,10 @@ function run(...)
    assert(type(version) == "string" or not version)
 
    if flags["pack-binary-rock"] then
-      return pack.pack_binary_rock(name, version, do_build, name, version)
+      return pack.pack_binary_rock(lr, name, version, do_build, name, version)
    else
       local ok, err = fs.check_command_permissions(flags)
       if not ok then return nil, err end
-      return do_build(name, version)
+      return do_build(lr, name, version)
    end
 end

@@ -49,16 +49,16 @@ local function prepare_sandbox(file)
    return root_dir
 end
 
-local function validate_rockspec(file)
-   local ok, err, errcode = build.build_rockspec(file, true)
+local function validate_rockspec(lr, file)
+   local ok, err, errcode = build.build_rockspec(lr, file, true)
    if not ok then
       util.printerr(err)
    end
    return ok, err, errcode
 end
 
-local function validate_src_rock(file)
-   local ok, err, errcode = build.build_rock(file, false)
+local function validate_src_rock(lr, file)
+   local ok, err, errcode = build.build_rock(lr, file, false)
    if not ok then
       util.printerr(err)
    end
@@ -73,7 +73,7 @@ local function validate_rock(file)
    return ok, err, errcode
 end
 
-local function validate(repo, flags)
+local function validate(lr, repo, flags)
    local results = {
       ok = {}
    }
@@ -97,9 +97,9 @@ local function validate(repo, flags)
       util.printout()
       util.printout("Verifying "..pathname)
       if file:match("%.rockspec$") then
-         ok, err, errcode = validate_rockspec(pathname)
+         ok, err, errcode = validate_rockspec(lr, pathname)
       elseif file:match("%.src%.rock$") then
-         ok, err, errcode = validate_src_rock(pathname)
+         ok, err, errcode = validate_src_rock(lr, pathname)
       elseif file:match("%.rock$") then
          ok, err, errcode = validate_rock(pathname)
       end
@@ -153,12 +153,15 @@ local function validate(repo, flags)
    return true
 end
 
-function run(...)
+--- Driver function for "validate" command.
+-- @param lr table: LuaRocks context object.
+function run(lr, ...)
+   cfg.assert_lr(lr)
    local flags, repo = util.parse_flags(...)
    repo = repo or cfg.rocks_dir
 
    util.printout("Verifying contents of "..repo)
 
-   return validate(repo, flags)
+   return validate(lr, repo, flags)
 end
 

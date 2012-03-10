@@ -397,11 +397,12 @@ end
 --- Check dependencies of a rock and attempt to install any missing ones.
 -- Packages are installed using the LuaRocks "install" command.
 -- Aborts the program if a dependency could not be fulfilled.
+-- @param lr LuaRocks context object.
 -- @param rockspec table: A rockspec in table format.
 -- @return boolean or (nil, string, [string]): True if no errors occurred, or
 -- nil and an error message if any test failed, followed by an optional
 -- error code.
-function fulfill_dependencies(rockspec)
+function fulfill_dependencies(lr, rockspec)
 
    local search = require("luarocks.search")
    local install = require("luarocks.install")
@@ -472,7 +473,7 @@ function fulfill_dependencies(rockspec)
             if not rock then
                return nil, "Could not satisfy dependency: "..show_dep(dep)
             end
-            local ok, err, errcode = install.run(rock)
+            local ok, err, errcode = install.run(lr, rock)
             if not ok then
                return nil, "Failed installing dependency: "..rock.." - "..err, errcode
             end

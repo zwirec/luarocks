@@ -31,10 +31,12 @@ in the current directory.
 ]]
 
 --- Driver function for "make" command.
+-- @param lr table: LuaRocks context object.
 -- @param name string: A local rockspec.
 -- @return boolean or (nil, string): True if build was successful; nil and an
 -- error message otherwise.
-function run(...)
+function run(lr, ...)
+   cfg.assert_lr(lr)
    local flags, rockspec = util.parse_flags(...)
    assert(type(rockspec) == "string" or not rockspec)
    
@@ -62,10 +64,10 @@ function run(...)
       if not rspec then
          return nil, err
       end
-      return pack.pack_binary_rock(rspec.name, rspec.version, build.build_rockspec, rockspec, false, true)
+      return pack.pack_binary_rock(lr, rspec.name, rspec.version, build.build_rockspec, rockspec, false, true)
    else
       local ok, err = fs.check_command_permissions(flags)
       if not ok then return nil, err end
-      return build.build_rockspec(rockspec, false, true)
+      return build.build_rockspec(lr, rockspec, false, true)
    end
 end

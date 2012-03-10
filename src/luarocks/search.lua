@@ -329,12 +329,13 @@ end
 -- servers a single .src.rock or .rockspec file that satisfies
 -- the request, and run the given function on it; or display to the
 -- user possibilities if it couldn't narrow down a single match.
+-- @param lr table: LuaRocks context object.
 -- @param action function: A function that takes a .src.rock or
 -- .rockspec URL as a parameter.
 -- @param name string: A rock name
 -- @param version string or nil: A version number may also be given.
 -- @return The result of the action function, or nil and an error message. 
-function act_on_src_or_rockspec(action, name, version)
+function act_on_src_or_rockspec(lr, action, name, version)
    assert(type(action) == "function")
    assert(type(name) == "string")
    assert(type(version) == "string" or not version)
@@ -343,7 +344,7 @@ function act_on_src_or_rockspec(action, name, version)
    query.arch = "src|rockspec"
    local results, err = find_suitable_rock(query)
    if type(results) == "string" then
-      return action(results)
+      return action(lr, results)
    elseif type(results) == "table" and next(results) then
       util.printout("Multiple search results were returned.")
       util.printout()

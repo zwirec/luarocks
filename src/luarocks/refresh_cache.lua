@@ -14,7 +14,10 @@ If not given, the default server set in the upload_server variable
 from the configuration file is used instead.
 ]]
 
-function run(...)
+--- Driver function for "refresh_cache" command.
+-- @param lr table: LuaRocks context object.
+function run(lr, ...)
+   cfg.assert_lr(lr)
    local flags = util.parse_flags(...)
    local server, upload_server = cache.get_upload_server(flags["server"])
    if not server then return nil, upload_server end

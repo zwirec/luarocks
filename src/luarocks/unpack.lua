@@ -3,6 +3,7 @@
 -- Unpack the contents of a rock.
 module("luarocks.unpack", package.seeall)
 
+local cfg = require("luarocks.cfg")
 local fetch = require("luarocks.fetch")
 local fs = require("luarocks.fs")
 local util = require("luarocks.util")
@@ -80,10 +81,11 @@ end
 --- Create a directory and perform the necessary actions so that
 -- the sources for the rock and its rockspec are unpacked inside it,
 -- laid out properly so that the 'make' command is able to build the module.
+-- @param lr table: LuaRocks context object.
 -- @param file string: A rockspec or .rock URL.
 -- @return boolean or (nil, string): true if successful or nil followed
 -- by an error message.
-local function run_unpacker(file)
+local function run_unpacker(lr, file)
    assert(type(file) == "string")
    
    local base_name = dir.base_name(file)
@@ -128,13 +130,15 @@ local function run_unpacker(file)
 end
 
 --- Driver function for the "unpack" command.
+-- @param lr table: LuaRocks context object.
 -- @param name string: may be a rock filename, for unpacking a 
 -- rock file or the name of a rock to be fetched and unpacked.
 -- @param version string or nil: if the name of a package is given, a
 -- version may also be passed.
 -- @return boolean or (nil, string): true if successful or nil followed
 -- by an error message.
-function run(...)
+function run(lr, ...)
+   cfg.assert_lr(lr)
    local flags, name, version = util.parse_flags(...)
 
    assert(type(version) == "string" or not version)
@@ -143,9 +147,9 @@ function run(...)
    end
 
    if name:match(".*%.rock") or name:match(".*%.rockspec") then
-      return run_unpacker(name)
+      return run_unpacker(lr, name)
    else
       local search = require("luarocks.search")
-      return search.act_on_src_or_rockspec(run_unpacker, name, version)
+      return search.act_on_src_or_rockspec(lr, run_unpacker, name, version)
    end
 end

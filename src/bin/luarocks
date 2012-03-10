@@ -2,10 +2,10 @@
 
 local command_line = require("luarocks.command_line")
 
-program_name = "luarocks"
-program_description = "LuaRocks main command-line interface"
+local program_name = "luarocks"
+local program_description = "LuaRocks main command-line interface"
 
-commands = {}
+local commands = {}
 commands.help = require("luarocks.help")
 commands.pack = require("luarocks.pack")
 commands.unpack = require("luarocks.unpack")
@@ -19,4 +19,4 @@ commands.download = require("luarocks.download")
 commands.path = require("luarocks.path")
 commands.show = require("luarocks.show")
 
-command_line.run_command(...)
+command_line.run_command(program_name, program_description, commands, ...)

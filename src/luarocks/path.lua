@@ -306,8 +306,11 @@ function use_tree(tree)
 end
 
 --- Driver function for "path" command.
+-- @param lr table: LuaRocks context object.
 -- @return boolean This function always succeeds.
-function run(...)
+function run(lr, ...)
+   cfg.assert_lr(lr)
+
    util.printout(cfg.export_lua_path:format(package.path))
    util.printout(cfg.export_lua_cpath:format(package.cpath))
    return true

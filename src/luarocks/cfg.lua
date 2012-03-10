@@ -441,3 +441,7 @@ function is_platform(query)
       end
    end
 end
+
+function assert_lr(lr)
+   assert(type(lr) == "table" and lr.version == program_version, "Expected a LuaRocks context object as first argument")
+end

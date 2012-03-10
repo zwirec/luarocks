@@ -56,10 +56,12 @@ local function format_text(text)
 end
 
 --- Driver function for "show" command.
+-- @param lr table: LuaRocks context object.
 -- @param name or nil: an existing package name.
 -- @param version string or nil: a version may also be passed.
 -- @return boolean: True if succeeded, nil on errors.
-function run(...)
+function run(lr, ...)
+   cfg.assert_lr(lr)
    local flags, name, version = util.parse_flags(...)
    if not name then
       return nil, "Argument missing, see help."

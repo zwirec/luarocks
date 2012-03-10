@@ -70,13 +70,15 @@ local function delete_versions(name, versions)
 end
 
 --- Driver function for the "remove" command.
+-- @param lr table: LuaRocks context object.
 -- @param name string: name of a rock. If a version is given, refer to
 -- a specific version; otherwise, try to remove all versions.
 -- @param version string: When passing a package name, a version number
 -- may also be given.
 -- @return boolean or (nil, string): True if removal was
 -- successful, nil and an error message otherwise.
-function run(...)
+function run(lr, ...)
+   cfg.assert_lr(lr)
    local flags, name, version = util.parse_flags(...)
    
    if type(name) ~= "string" then

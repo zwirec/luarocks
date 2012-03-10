@@ -9,7 +9,7 @@ module("luarocks.help", package.seeall)
 local util = require("luarocks.util")
 local cfg = require("luarocks.cfg")
 
-help_summary = "Help on commands. Type '"..program_name.." help <command>' for more."
+help_summary = "Help on commands."
 
 help_arguments = "[<command>]"
 help = [[
@@ -25,20 +25,24 @@ local function print_section(section)
 end
 
 --- Driver function for the "help" command.
+-- @param lr table: LuaRocks context object.
 -- @param command string or nil: command to show help for; if not
 -- given, help summaries for all commands are shown.
 -- @return boolean or (nil, string): true if there were no errors
 -- or nil and an error message if an invalid command was requested.
-function run(...)
+function run(lr, ...)
+   cfg.assert_lr(lr)
    local flags, command = util.parse_flags(...)
+
+   help_summary = " Type '"..lr.program_name.." help <command>' for more."
 
    if not command then
       local sys_file, sys_ok, home_file, home_ok = cfg.which_config()
       print_banner()
       print_section("NAME")
-      util.printout("\t"..program_name..[[ - ]]..program_description)
+      util.printout("\t"..lr.program_name..[[ - ]]..lr.program_description)
       print_section("SYNOPSIS")
-      util.printout("\t"..program_name..[[ [--from=<server> | --only-from=<server>] [--to=<tree>] [VAR=VALUE]... <command> [<argument>] ]])
+      util.printout("\t"..lr.program_name..[[ [--from=<server> | --only-from=<server>] [--to=<tree>] [VAR=VALUE]... <command> [<argument>] ]])
       print_section("GENERAL OPTIONS")
       util.printout([[
 	These apply to all commands, as appropriate:
@@ -57,12 +61,12 @@ function run(...)
 	can be overriden with VAR=VALUE assignments.]])
       print_section("COMMANDS")
       local names = {}
-      for name, command in pairs(commands) do
+      for name, command in pairs(lr.commands) do
          table.insert(names, name)
       end
       table.sort(names)
       for _, name in ipairs(names) do
-         local command = commands[name]
+         local command = lr.commands[name]
          util.printout("", name)
          util.printout("\t", command.help_summary)
       end
@@ -72,15 +76,15 @@ function run(...)
 	and user configuration file: ]]..home_file .. " (" .. (home_ok and "ok" or "failed") ..")\n")
    else
       command = command:gsub("-", "_")
-      if commands[command] then
-         local arguments = commands[command].help_arguments or "<argument>"
+      if lr.commands[command] then
+         local arguments = lr.commands[command].help_arguments or "<argument>"
          print_banner()
          print_section("NAME")
-         util.printout("\t"..program_name.." "..command.." - "..commands[command].help_summary)
+         util.printout("\t"..lr.program_name.." "..command.." - "..lr.commands[command].help_summary)
          print_section("SYNOPSIS")
-         util.printout("\t"..program_name.." "..command.." "..arguments)
+         util.printout("\t"..lr.program_name.." "..command.." "..arguments)
          print_section("DESCRIPTION")
-         util.printout("",(commands[command].help:gsub("\n","\n\t"):gsub("\n\t$","")))
+         util.printout("",(lr.commands[command].help:gsub("\n","\n\t"):gsub("\n\t$","")))
          print_section("SEE ALSO")
          util.printout("","'luarocks help' for general options and configuration.\n")
       else

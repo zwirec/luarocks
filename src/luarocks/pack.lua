@@ -177,13 +177,15 @@ function pack_binary_rock(name, version, cmd, ...)
 end
 
 --- Driver function for the "pack" command.
+-- @param lr table: LuaRocks context object.
 -- @param arg string:  may be a rockspec file, for creating a source rock,
 -- or the name of an installed package, for creating a binary rock.
 -- @param version string or nil: if the name of a package is given, a
 -- version may also be passed.
 -- @return boolean or (nil, string): true if successful or nil followed
 -- by an error message.
-function run(...)
+function run(lr, ...)
+   cfg.assert_lr(lr)
    local flags, arg, version = util.parse_flags(...)
    assert(type(version) == "string" or not version)
    if type(arg) ~= "string" then
