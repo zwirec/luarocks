@@ -358,11 +358,13 @@ function act_on_src_or_rockspec(lr, action, name, version)
 end
 
 --- Driver function for "search" command.
+-- @param lr table: LuaRocks context object.
 -- @param name string: A substring of a rock name to search.
 -- @param version string or nil: a version may also be passed.
 -- @return boolean or (nil, string): True if build was successful; nil and an
 -- error message otherwise.
-function run(...)
+function run(lr, ...)
+   cfg.assert_lr(lr)
    local flags, name, version = util.parse_flags(...)
    
    if flags["all"] then
