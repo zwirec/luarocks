@@ -153,7 +153,7 @@ function run_command(program_name, program_description, commands, ...)
       end
    end
    
-   local lr = luarocks.new()
+   local lr = luarocks.new(program_name, program_description, commands)
    
    if commands[command] then
       local xp, ok, err = xpcall(function() return commands[command].run(lr, unpack(args)) end, function(err)

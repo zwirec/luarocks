@@ -34,7 +34,7 @@ function run(lr, ...)
    cfg.assert_lr(lr)
    local flags, command = util.parse_flags(...)
 
-   help_summary = " Type '"..lr.program_name.." help <command>' for more."
+   help_summary = help_summary .. " Type '"..lr.program_name.." help <command>' for more."
 
    if not command then
       local sys_file, sys_ok, home_file, home_ok = cfg.which_config()
