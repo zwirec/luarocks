@@ -507,6 +507,174 @@ local function add_all_patterns(file, patterns, files)
    end
 end
 
+local function make_external_deps_dirlist(directories, subdir, vars, name, dirname)
+   local specific = vars[name.."_"..dirname]
+   if specific then
+      return { specific }
+   end
+   local prefix = vars[name.."_DIR"]
+   if type(prefix) == "table" then
+      if prefix.bin then
+         subdir = prefix.bin
+      end
+      prefix = prefix.prefix
+   end
+   if prefix then
+       directories = { dir.path(prefix, subdir) }
+   end
+   local dirlist = {}
+   for _, directory in ipairs(directories) do
+      table.insert(dirlist, dir.path(directories, subdir))
+   end
+   return dirlist
+end
+
+local function make_external_deps_files(file, patterns)
+   local files = {}
+   if not file:match("%.") then
+      add_all_patterns(file, patterns, files)
+   else
+      for _, pattern in ipairs(patterns) do
+         local matched = deconstruct_pattern(file, pattern)
+         if matched then
+            add_all_patterns(matched, patterns, files)
+         end
+      end
+      table.insert(files, file)
+   end
+end
+
+local function find_with_glob(f, directory)
+   local fs = require("luarocks.fs")
+   if f:match("%*") then
+      local replaced = f:gsub("%.", "%%."):gsub("%*", ".*")
+      for _, entry in ipairs(fs.list_dir(directory)) do
+         if entry:match(replaced) then
+            return true
+         end
+      end
+      return false
+   else
+      return fs.is_file(dir.path(directory, f))
+   end
+end
+
+local function fix_lib_name(f)
+   -- small convenience hack
+   if f:match("%.so$") or f:match("%.dylib$") or f:match("%.dll$") then
+      f = f:gsub("%.[^.]+$", "."..cfg.external_lib_extension)
+   end
+   return f
+end
+
+local function check_external_dep_dir(files, subdir, vars, name, dirname, filter_fn)
+  
+   local directories = make_external_deps_dirlist(cfg.external_deps_dirs, subdir, vars, name, dirname)
+
+   local failed_files = {}
+   local ok = false
+   for _, directory in ipairs(directories) do
+      local found = false
+      for _, f in pairs(files) do
+         if filter_fn then
+            f = filter_fn(f)
+         end
+         found = find_with_glob(f, directory)
+         if found then
+            break
+         else
+            table.insert(failed_files, f)
+         end
+      end
+      if found then
+         vars[name.."_"..dirname] = directory
+         ok = true
+         break
+      end
+   end
+   if not ok then
+      return nil, failed_files, dirname
+   end
+   return true
+end
+
+--- Check a single entry from the external_dependencies table.
+-- @param name string: key in external_dependencies table
+-- @param files table: value in external_dependencies table, specifies
+-- what to look for.
+-- @param patterns string: the filename patterns to use when scanning dependencies
+-- @param subdirs string: the subdirectory substrings to use when scanning dependencies
+-- @param mode string: operation mode, "build" or "install"
+-- @return boolean or (nil, string, string): True if no errors occurred, or
+-- nil, an error message and the error type if any test failed.
+local function check_external_dependency(name, files, patterns, subdirs, mode, vars)
+   local ok = true
+   local failed_files = nil
+   local failed_dirname = nil
+   
+   if files.program then
+      local filenames = make_external_deps_files(files.program, patterns.bin)
+      ok, failed_files, failed_dirname = check_external_dep_dir(filenames, subdirs.bin, vars, name, "BINDIR")
+   end
+   if ok and files.header and mode == "install" then
+      local filenames = make_external_deps_files(files.header, patterns.include)
+      ok, failed_files, failed_dirname = check_external_dep_dir(filenames, subdirs.include, vars, name, "INCDIR")
+   end
+   if ok and files.library then
+      local filenames = make_external_deps_files(files.library, patterns.lib)
+      ok, failed_files, failed_dirname = check_external_dep_dir(filenames, subdirs.lib, vars, name, "LIBDIR", fix_lib_name)
+   end
+   if not ok then
+      return nil, failed_files, failed_dirname
+   end
+   vars[name.."_DIR"] = prefix
+   return true
+end
+
+--- Set up path-related variables for external dependencies.
+-- For each key in the external_dependencies table in the
+-- rockspec file, four variables are created: <key>_DIR, <key>_BINDIR,
+-- <key>_INCDIR and <key>_LIBDIR. These are not overwritten
+-- if already set (e.g. by the LuaRocks config file or through the
+-- command-line). Values in the external_dependencies table
+-- are tables that may contain a "header" or a "library" field,
+-- with filenames to be tested for existence.
+-- @param rockspec table: The rockspec table.
+-- @param mode string: if "build" is given, checks all files;
+-- if "install" is given, do not scan for headers.
+-- @return boolean or (nil, string, string): True if no errors occurred, or
+-- nil, an error message and the error type if any test failed.
+function check_external_deps(rockspec, mode)
+   assert(type(rockspec) == "table")
+
+   local fs = require("luarocks.fs")
+   
+   local vars = rockspec.variables
+   local patterns = cfg.external_deps_patterns
+   local subdirs = cfg.external_deps_subdirs
+   if mode == "install" then
+      patterns = cfg.runtime_external_deps_patterns
+      subdirs = cfg.runtime_external_deps_subdirs
+   end
+   if not rockspec.external_dependencies then
+      return true
+   end
+   
+   for name, files in pairs(rockspec.external_dependencies) do
+      local ok, failed_files, failed_dirname = check_external_dependency(name, files, patterns, subdirs, mode, vars)
+      if not ok then
+         return nil, 
+         "Could not find expected file "..table.concat(failed_files, ", or ").." for "..name..
+         " -- you may have to install "..name.." in your system and/or pass "..
+         name.."_DIR or "..name.."_"..failed_dirname..
+         " to the luarocks command. Example: luarocks install "..rockspec.name..
+         " "..name.."_DIR=/usr/local", "dependency"
+      end
+   end
+   return true
+end
+
+--[[
 --- Set up path-related variables for external dependencies.
 -- For each key in the external_dependencies table in the
 -- rockspec file, four variables are created: <key>_DIR, <key>_BINDIR,
@@ -631,6 +799,7 @@ function check_external_deps(rockspec, mode)
    end
    return true
 end
+]]
 
 --- Recursively scan dependencies, to build a transitive closure of all
 -- dependent packages.

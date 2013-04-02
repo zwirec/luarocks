@@ -14,6 +14,7 @@ local cfg = require("luarocks.cfg")
 local function load_fns(fs_table)
    for name, fn in pairs(fs_table) do
       if not _M[name] then
+         -- _M[name] = function(...) print(name, ...) return fn(...) end
          _M[name] = fn
       end
    end

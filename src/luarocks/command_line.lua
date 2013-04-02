@@ -152,8 +152,18 @@ function run_command(...)
       -- interface, which I know some people use (even though
       -- I never published it as a public API...)
       local xp, ok, err = xpcall(function() return commands[command].run(unpack(args)) end, function(err)
+         local lua_version = "Running Lua ".._VERSION..(jit and " - "..jit.version or "")
+         local modules = {}
+         for k,_ in pairs(package.loaded) do
+            if not k:match("^luarocks%.") then
+               table.insert(modules, k)
+            end
+         end
+         table.concat(modules, ", ")
          die(debug.traceback("LuaRocks "..cfg.program_version
             .." bug (please report at luarocks-developers@lists.sourceforge.net).\n"
+            ..lua_version.."\n"
+            .."Loaded modules: "..modules.."\n"
             ..err, 2))
       end)
       if xp and (not ok) then
