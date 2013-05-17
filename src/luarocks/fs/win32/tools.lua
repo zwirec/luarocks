@@ -12,6 +12,10 @@ local dir_stack = {}
 
 local vars = cfg.variables
 
+local function pack(...)
+   return { n = select("#", ...), ... }
+end
+
 --- Strip the last extension of a filename.
 -- Example: "foo.tar.gz" becomes "foo.tar".
 -- If filename has no dots, returns it unchanged.
@@ -51,8 +55,17 @@ end
 -- @return boolean: true if command succeeds (status code 0), false
 -- otherwise.
 function execute_string(cmd)
-   local code = os.execute(command_at(fs.current_dir(), cmd))
-   if code == 0 or code == true then
+   cmd = command_at(fs.current_dir(), cmd)
+   if cfg.verbose then print("Executing: "..tostring(cmd)) end
+   local code = pack(os.execute(cmd))
+   if cfg.verbose then
+      print("Results: "..tostring(code.n))
+      for i = 1,code.n do
+         print("  "..tostring(i).." ("..type(code[i]).."): "..tostring(code[i]))
+      end
+      print()
+   end
+   if code[1] == 0 or code[1] == true then
       return true
    else
       return false

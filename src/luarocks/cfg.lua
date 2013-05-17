@@ -15,8 +15,14 @@ local rawset, next, table, pairs, require, io, os, setmetatable, pcall, ipairs, 
 
 module("luarocks.cfg")
 
+lua_version = _VERSION:sub(5)
+local version_suffix = lua_version:gsub("%.", "_")
+
 -- Load site-local global configurations
-local ok, site_config = pcall(require, "luarocks.site_config")
+local ok, site_config = pcall(require, "luarocks.site_config_"..version_suffix)
+if not ok then
+   ok, site_config = pcall(require, "luarocks.site_config")
+end
 if not ok then
    io.stderr:write("Site-local luarocks/site_config.lua file not found. Incomplete installation?\n")
    site_config = {}
@@ -24,8 +30,7 @@ end
 
 _M.site_config = site_config
 
-lua_version = _VERSION:sub(5)
-program_version = "2.0.12"
+program_version = "2.0.13"
 
 local persist = require("luarocks.persist")
 
@@ -97,38 +102,50 @@ end
 
 -- Path configuration:
 
-local version_suffix = lua_version:gsub ("%.", "_")
 local sys_config_file, home_config_file
+local sys_config_dir, home_config_dir
 local sys_config_ok, home_config_ok = false, false
-sys_config_file = site_config["LUAROCKS_SYSCONFIG_" .. version_suffix] or site_config.LUAROCKS_SYSCONFIG
+sys_config_dir = site_config.LUAROCKS_SYSCONFDIR
 if detected.windows then
    home = os.getenv("APPDATA") or "c:"
-   sys_config_file = sys_config_file or "c:/luarocks/config.lua"
-   home_config_file = home.."/luarocks/config.lua"
+   sys_config_dir = sys_config_dir or "c:/luarocks"
+   home_config_dir = home.."/luarocks"
    home_tree = home.."/luarocks/"
 else
    home = os.getenv("HOME") or ""
-   sys_config_file = sys_config_file or "/etc/luarocks/config.lua"
-   home_config_file = home.."/.luarocks/config.lua"
+   sys_config_dir = sys_config_dir or "/etc/luarocks"
+   home_config_dir = home.."/.luarocks"
    home_tree = home.."/.luarocks/"
 end
 
 variables = {}
 rocks_trees = {}
 
-local ok, err = persist.load_into_table(sys_config_file, _M)
-if ok then
-   sys_config_ok = true
-else -- nil or false
-   sys_config_ok = ok
-   if err and ok == nil then
-      io.stderr:write(err.."\n")
-   end
+sys_config_file = site_config.LUAROCKS_SYSCONFIG or sys_config_dir.."/config-"..lua_version..".lua"
+local err
+sys_config_ok, err = persist.load_into_table(sys_config_file, _M)
+
+if not sys_config_ok then
+   sys_config_file = sys_config_dir.."/config.lua"
+   sys_config_ok, err = persist.load_into_table(sys_config_file, _M)
+end
+if err and ok == nil then
+   io.stderr:write(err.."\n")
 end
 
 if not site_config.LUAROCKS_FORCE_CONFIG then
-   home_config_file = os.getenv("LUAROCKS_CONFIG_" .. version_suffix) or os.getenv("LUAROCKS_CONFIG") or home_config_file
-   local home_overrides, err = persist.load_into_table(home_config_file, { home = home })
+   local home_overrides, err
+   home_config_file = os.getenv("LUAROCKS_CONFIG_" .. version_suffix) or os.getenv("LUAROCKS_CONFIG")
+   if home_config_file then
+      home_overrides, err = persist.load_into_table(home_config_file, { home = home })
+   else
+      home_config_file = home_config_dir.."/config-"..lua_version..".lua"
+      home_overrides, err = persist.load_into_table(home_config_file, { home = home })
+      if not home_overrides then
+         home_config_file = home_config_dir.."/config.lua"
+         home_overrides, err = persist.load_into_table(home_config_file, { home = home })
+      end
+   end
    if home_overrides then
       home_config_ok = true
       local util = require("luarocks.util")
@@ -169,6 +186,7 @@ local defaults = {
 
    lua_modules_path = "/share/lua/"..lua_version,
    lib_modules_path = "/lib/lua/"..lua_version,
+   rocks_subdir = site_config.LUAROCKS_ROCKS_SUBDIR or "/lib/luarocks/rocks",
 
    arch = "unknown",
    lib_extension = "unknown",
@@ -193,18 +211,18 @@ local defaults = {
       MAKE = "make",
       CC = "cc",
       LD = "ld",
-      
+
       CVS = "cvs",
       GIT = "git",
       SSCM = "sscm",
       SVN = "svn",
       HG = "hg",
-      
+
       RSYNC = "rsync",
       WGET = "wget",
       SCP = "scp",
       CURL = "curl",
-      
+
       PWD = "pwd",
       MKDIR = "mkdir",
       RMDIR = "rmdir",
@@ -221,18 +239,18 @@ local defaults = {
       GUNZIP = "gunzip",
       BUNZIP2 = "bunzip2",
       TAR = "tar",
-      
+
       MD5SUM = "md5sum",
       OPENSSL = "openssl",
       MD5 = "md5",
       STAT = "stat",
-      
+
       CMAKE = "cmake",
       SEVENZ = "7z",
-      
+
       STATFLAG = "-c '%a'",
    },
-   
+
    external_deps_subdirs = {
       bin = "bin",
       lib = "lib",
@@ -246,7 +264,7 @@ local defaults = {
 }
 
 if detected.windows then
-   home_config_file = home_config_file:gsub("\\","/")
+   home_config_file = home_config_file and home_config_file:gsub("\\","/")
    defaults.fs_use_modules = false
    defaults.arch = "win32-"..proc
    defaults.platforms = {"win32", "windows" }
@@ -262,7 +280,7 @@ if detected.windows then
    defaults.variables.MAKE = "nmake"
    defaults.variables.CC = "cl"
    defaults.variables.RC = "rc"
-   defaults.variables.WRAPPER = site_config.LUAROCKS_PREFIX .. "\\2.0\\rclauncher.obj"
+   defaults.variables.WRAPPER = site_config.LUAROCKS_PREFIX .. "\\2.0\\rclauncher.c"
    defaults.variables.LD = "link"
    defaults.variables.MT = "mt"
    defaults.variables.LUALIB = "lua"..lua_version..".lib"
@@ -293,7 +311,7 @@ if detected.mingw32 then
    defaults.variables.MAKE = "mingw32-make"
    defaults.variables.CC = "mingw32-gcc"
    defaults.variables.RC = "windres"
-   defaults.variables.WRAPPER = site_config.LUAROCKS_PREFIX .. "\\2.0\\rclauncher.o"
+   defaults.variables.WRAPPER = site_config.LUAROCKS_PREFIX .. "\\2.0\\rclauncher.c"
    defaults.variables.LD = "mingw32-gcc"
    defaults.variables.CFLAGS = "-O2"
    defaults.variables.LIBFLAG = "-shared"

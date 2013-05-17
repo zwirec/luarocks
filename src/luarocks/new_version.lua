@@ -60,6 +60,18 @@ local function check_url_and_update_md5(out_rs, out_name)
    if file then
       util.printout("File successfully downloaded. Updating MD5 checksum...")
       out_rs.source.md5 = fs.get_md5(file)
+      fs.change_dir(temp_dir)
+      fs.unpack_archive(file)
+      local base_dir = out_rs.source.dir or fetch.url_to_base_dir(out_rs.source.url)
+      if not fs.exists(base_dir) then
+         util.printerr("Directory "..base_dir.." not found")
+         local files = fs.list_dir()
+         if files[1] and fs.is_dir(files[1]) then
+            util.printerr("Found "..files[1])
+            out_rs.source.dir = files[1]
+         end
+      end
+      fs.pop_dir()
    else
       util.printerr("Warning: invalid URL - "..temp_dir)
    end
@@ -68,7 +80,7 @@ end
 function run(...)
    local flags, input, version, url = util.parse_flags(...)
    if not input then
-      return nil, "Missing arguments: expected program or rockspec. See help."
+      return nil, "Missing arguments: expected program or rockspec. "..util.see_help("new_version")
    end
    assert(type(input) == "string")
    
@@ -100,16 +112,22 @@ function run(...)
       new_ver = old_ver
       new_rev = tonumber(old_rev) + 1
    end
-   
+   local new_rockver = new_ver:gsub("-", "")
    
    local out_rs = persist.load_into_table(filename)
    local out_name = out_rs.package:lower()
-   out_rs.version = new_ver.."-"..new_rev
+   out_rs.version = new_rockver.."-"..new_rev
    if url then
       out_rs.source.url = url
       check_url_and_update_md5(out_rs, out_name)
    else
       if new_ver ~= old_ver then
+         if out_rs.source and out_rs.source.dir then
+            try_replace(out_rs.source, "dir", old_ver, new_ver)
+         end
+         if out_rs.source and out_rs.source.file then
+            try_replace(out_rs.source, "file", old_ver, new_ver)
+         end
          local ok = try_replace(out_rs.source, "url", old_ver, new_ver)
          if ok then
             check_url_and_update_md5(out_rs, out_name)
@@ -126,7 +144,7 @@ function run(...)
       out_rs.build.type = "builtin"
    end
    
-   local out_filename = out_name.."-"..new_ver.."-"..new_rev..".rockspec"
+   local out_filename = out_name.."-"..new_rockver.."-"..new_rev..".rockspec"
    
    persist.save_from_table(out_filename, out_rs, order)
    

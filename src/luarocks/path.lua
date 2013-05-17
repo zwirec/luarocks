@@ -28,18 +28,25 @@ end
 
 function rocks_dir(tree)
    if type(tree) == "string" then
-      return dir.path(tree, "lib", "luarocks", "rocks")
+      return dir.path(tree, cfg.rocks_subdir)
    else
       assert(type(tree) == "table")
-      return tree.rocks_dir or dir.path(tree.root, "lib", "luarocks", "rocks")
+      return tree.rocks_dir or dir.path(tree.root, cfg.rocks_subdir)
    end
 end
 
 function root_dir(rocks_dir)
    assert(type(rocks_dir) == "string")
-   
-   local suffix = dir.path("lib", "luarocks")
-   return rocks_dir:match("(.*)" .. suffix .. ".*$")
+   return rocks_dir:match("(.*)" .. util.matchquote(cfg.rocks_subdir) .. ".*$")
+end
+
+function rocks_tree_to_string(tree)
+   if type(tree) == "string" then
+      return tree
+   else
+      assert(type(tree) == "table")
+      return tree.root
+   end
 end
 
 function deploy_bin_dir(tree)
@@ -71,10 +78,10 @@ end
 
 function manifest_file(tree)
    if type(tree) == "string" then
-      return dir.path(tree, "lib", "luarocks", "rocks", "manifest")
+      return dir.path(tree, cfg.rocks_subdir, "manifest")
    else
       assert(type(tree) == "table")
-      return (tree.rocks_dir and dir.path(tree.rocks_dir, "manifest")) or dir.path(tree.root, "lib", "luarocks", "rocks", "manifest")
+      return (tree.rocks_dir and dir.path(tree.rocks_dir, "manifest")) or dir.path(tree.root, cfg.rocks_subdir, "manifest")
    end
 end
 
