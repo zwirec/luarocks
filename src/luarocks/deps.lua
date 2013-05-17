@@ -507,26 +507,42 @@ local function add_all_patterns(file, patterns, files)
    end
 end
 
+local dirname_to_suffix = {
+   BINDIR = "bin",
+   INCDIR = "include",
+   LIBDIR = "lib",
+}
+
+local function infer_prefix(path)
+   for _, suffix in pairs(dirname_to_suffix) do
+      local prefix = path:match("(.*)/"..suffix)
+      if prefix then return prefix end
+   end
+   return path
+end
+
 local function make_external_deps_dirlist(directories, subdir, vars, name, dirname)
+   local prefixes = {}
    local specific = vars[name.."_"..dirname]
    if specific then
-      return { specific }
+      prefixes[specific] = infer_prefix(specific)
+      return { specific }, prefixes
    end
    local prefix = vars[name.."_DIR"]
    if type(prefix) == "table" then
-      if prefix.bin then
-         subdir = prefix.bin
-      end
+      if prefix[dirname_to_suffix[dirname]] then subdir = prefix[dirname_to_suffix[dirname]] end
       prefix = prefix.prefix
    end
    if prefix then
-       directories = { dir.path(prefix, subdir) }
+      directories = { prefix }
    end
    local dirlist = {}
    for _, directory in ipairs(directories) do
-      table.insert(dirlist, dir.path(directories, subdir))
+      local entry = dir.path(directory, subdir)
+      prefixes[entry] = directory
+      table.insert(dirlist, entry)
    end
-   return dirlist
+   return dirlist, prefixes
 end
 
 local function make_external_deps_files(file, patterns)
@@ -542,6 +558,7 @@ local function make_external_deps_files(file, patterns)
       end
       table.insert(files, file)
    end
+   return files
 end
 
 local function find_with_glob(f, directory)
@@ -569,7 +586,8 @@ end
 
 local function check_external_dep_dir(files, subdir, vars, name, dirname, filter_fn)
   
-   local directories = make_external_deps_dirlist(cfg.external_deps_dirs, subdir, vars, name, dirname)
+   local prefix = nil
+   local directories, prefixes = make_external_deps_dirlist(cfg.external_deps_dirs, subdir, vars, name, dirname)
 
    local failed_files = {}
    local ok = false
@@ -587,6 +605,7 @@ local function check_external_dep_dir(files, subdir, vars, name, dirname, filter
          end
       end
       if found then
+         prefix = prefixes[directory]
          vars[name.."_"..dirname] = directory
          ok = true
          break
@@ -595,7 +614,7 @@ local function check_external_dep_dir(files, subdir, vars, name, dirname, filter
    if not ok then
       return nil, failed_files, dirname
    end
-   return true
+   return true, nil, nil, prefix
 end
 
 --- Check a single entry from the external_dependencies table.
@@ -612,22 +631,28 @@ local function check_external_dependency(name, files, patterns, subdirs, mode, v
    local failed_files = nil
    local failed_dirname = nil
    
+   local prefix = nil
    if files.program then
       local filenames = make_external_deps_files(files.program, patterns.bin)
-      ok, failed_files, failed_dirname = check_external_dep_dir(filenames, subdirs.bin, vars, name, "BINDIR")
+      ok, failed_files, failed_dirname, prefix = check_external_dep_dir(filenames, subdirs.bin, vars, name, "BINDIR")
    end
    if ok and files.header and mode == "install" then
       local filenames = make_external_deps_files(files.header, patterns.include)
-      ok, failed_files, failed_dirname = check_external_dep_dir(filenames, subdirs.include, vars, name, "INCDIR")
+      ok, failed_files, failed_dirname, prefix = check_external_dep_dir(filenames, subdirs.include, vars, name, "INCDIR")
    end
    if ok and files.library then
       local filenames = make_external_deps_files(files.library, patterns.lib)
-      ok, failed_files, failed_dirname = check_external_dep_dir(filenames, subdirs.lib, vars, name, "LIBDIR", fix_lib_name)
+      ok, failed_files, failed_dirname, prefix = check_external_dep_dir(filenames, subdirs.lib, vars, name, "LIBDIR", fix_lib_name)
    end
    if not ok then
       return nil, failed_files, failed_dirname
    end
    vars[name.."_DIR"] = prefix
+   for dirname, suffix in pairs(dirname_to_suffix) do
+      if not vars[name.."_"..dirname] then
+         vars[name.."_"..dirname] = dir.path(prefix, suffix)
+      end
+   end
    return true
 end
 
