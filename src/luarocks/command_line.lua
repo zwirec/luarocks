@@ -147,6 +147,7 @@ function run_command(...)
    end
    
    if commands[command] then
+      local std_modules = { os = true, table = true, bit32 = true, debug = true, io = true, _G = true, math = true, coroutine = true, string = true, package = true }
       -- TODO the interface of run should be modified, to receive the
       -- flags table and the (possibly unpacked) nonflags arguments.
       -- This would remove redundant parsing of arguments.
@@ -154,19 +155,18 @@ function run_command(...)
       -- interface, which I know some people use (even though
       -- I never published it as a public API...)
       local xp, ok, err = xpcall(function() return commands[command].run(unpack(args)) end, function(err)
-         local lua_version = "Running Lua ".._VERSION..(jit and " - "..jit.version or "")
+         local lua_version = "Running ".._VERSION..(jit and " - "..jit.version or "")
          local modules = {}
          for k,_ in pairs(package.loaded) do
-            if not k:match("^luarocks%.") then
+            if not k:match("^luarocks%.") and not std_modules[k] then
                table.insert(modules, k)
             end
          end
-         table.concat(modules, ", ")
          die(debug.traceback("LuaRocks "..cfg.program_version
             .." bug (please report at luarocks-developers@lists.sourceforge.net).\n"
             ..lua_version.."\n"
-            .."Loaded modules: "..modules.."\n"
-            ..err, 2))
+            .."Loaded modules: "..table.concat(modules, ", ").."\n"
+            ..tostring(err), 2))
       end)
       if xp and (not ok) then
          die(err)
