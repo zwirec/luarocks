@@ -16,7 +16,7 @@ local deps = require("luarocks.deps")
 -- versions of a package, or nil if none is available.
 local function get_installed_versions(name)
    assert(type(name) == "string")
-   
+
    local dirs = fs.list_dir(path.versions_dir(name))
    return (dirs and #dirs > 0) and dirs or nil
 end
@@ -30,15 +30,15 @@ end
 function is_installed(name, version)
    assert(type(name) == "string")
    assert(type(version) == "string")
-      
+
    return fs.is_dir(path.install_dir(name, version))
 end
 
-local function recurse_rock_manifest_tree(file_tree, action) 
+function recurse_rock_manifest_tree(file_tree, action)
    assert(type(file_tree) == "table")
    assert(type(action) == "function")
    local function do_recurse_rock_manifest_tree(tree, parent_path, parent_module)
-      
+
       for file, sub in pairs(tree) do
          if type(sub) == "table" then
             local ok, err = do_recurse_rock_manifest_tree(sub, parent_path..file.."/", parent_module..file..".")
@@ -55,7 +55,7 @@ end
 
 local function store_package_data(result, name, file_tree)
    if not file_tree then return end
-   return recurse_rock_manifest_tree(file_tree, 
+   return recurse_rock_manifest_tree(file_tree,
       function(parent_path, parent_module, file)
          local pathname = parent_path..file
          result[path.path_to_module(pathname)] = pathname
@@ -131,11 +131,11 @@ function run_hook(rockspec, hook_name)
    if not hooks then
       return true
    end
-   
+
    if cfg.hooks_enabled == false then
       return nil, "This rockspec contains hooks, which are blocked by the 'hooks_enabled' setting in your LuaRocks configuration."
    end
-   
+
    if not hooks.substituted_variables then
       util.variable_substitutions(hooks, rockspec.variables)
       hooks.substituted_variables = true
@@ -153,7 +153,7 @@ end
 local function install_binary(source, target, name, version)
    assert(type(source) == "string")
    assert(type(target) == "string")
-   
+
    if fs.is_lua(source) then
       ok, err = fs.wrap_script(source, target, name, version)
    else
@@ -190,6 +190,7 @@ function should_wrap_bin_scripts(rockspec)
    return true
 end
 
+
 function deploy_files(name, version, wrap_bin_scripts)
    assert(type(name) == "string")
    assert(type(version) == "string")
@@ -197,10 +198,7 @@ function deploy_files(name, version, wrap_bin_scripts)
 
    local function deploy_file_tree(file_tree, path_fn, deploy_dir, move_fn)
       local source_dir = path_fn(name, version)
-      if not move_fn then
-         move_fn = fs.move
-      end
-      return recurse_rock_manifest_tree(file_tree, 
+      return recurse_rock_manifest_tree(file_tree,
          function(parent_path, parent_module, file)
             local source = dir.path(source_dir, parent_path, file)
             local target = dir.path(deploy_dir, parent_path, file)
@@ -222,7 +220,11 @@ function deploy_files(name, version, wrap_bin_scripts)
             end
             ok, err = fs.make_dir(dir.dir_name(target))
             if not ok then return nil, err end
-            ok, err = move_fn(source, target, name, version)
+            if not move_fn then
+                ok, err = fs.copy(source, target)
+            else
+                ok, err = move_fn(source, target, name, version)
+            end
             fs.remove_dir_tree_if_empty(dir.dir_name(source))
             if not ok then return nil, err end
             return true
@@ -231,7 +233,7 @@ function deploy_files(name, version, wrap_bin_scripts)
    end
 
    local rock_manifest = manif.load_rock_manifest(name, version)
-   
+
    local ok, err = true
    if rock_manifest.bin then
       local move_bin_fn = wrap_bin_scripts and install_binary or fs.copy_binary
@@ -240,6 +242,7 @@ function deploy_files(name, version, wrap_bin_scripts)
    if ok and rock_manifest.lua then
       ok, err = deploy_file_tree(rock_manifest.lua, path.lua_dir, cfg.deploy_lua_dir)
    end
+
    if ok and rock_manifest.lib then
       ok, err = deploy_file_tree(rock_manifest.lib, path.lib_dir, cfg.deploy_lib_dir)
    end
@@ -274,7 +277,7 @@ function delete_version(name, version, quick)
    assert(type(version) == "string")
 
    local function delete_deployed_file_tree(file_tree, deploy_dir, suffix)
-      return recurse_rock_manifest_tree(file_tree, 
+      return recurse_rock_manifest_tree(file_tree,
          function(parent_path, parent_module, file)
             local target = dir.path(deploy_dir, parent_path, file)
             local versioned = path.versioned_name(target, deploy_dir, name, version)
@@ -304,7 +307,7 @@ function delete_version(name, version, quick)
    if not rock_manifest then
       return nil, "rock_manifest file not found for "..name.." "..version.." - not a LuaRocks 2 tree?"
    end
-   
+
    local ok, err = true
    if rock_manifest.bin then
       ok, err = delete_deployed_file_tree(rock_manifest.bin, cfg.deploy_bin_dir, cfg.wrapper_suffix)

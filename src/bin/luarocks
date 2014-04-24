@@ -1,4 +1,6 @@
 #!/usr/bin/env lua
+package.path = [[../?.lua;]]..package.path
+
 
 local loader = require("luarocks.loader")
 local command_line = require("luarocks.command_line")

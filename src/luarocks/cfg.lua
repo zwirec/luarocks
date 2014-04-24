@@ -202,8 +202,8 @@ local defaults = {
    hooks_enabled = true,
    deps_mode = "one",
 
-   lua_modules_path = "/share/lua/"..lua_version,
-   lib_modules_path = "/lib/lua/"..lua_version,
+   lua_modules_path = "/share/tarantool/",
+   lib_modules_path = "/lib/tarantool/",
    rocks_subdir = site_config.LUAROCKS_ROCKS_SUBDIR or "/lib/luarocks/rocks",
 
    arch = "unknown",

@@ -15,6 +15,7 @@ local manif = require("luarocks.manif")
 local search = require("luarocks.search")
 local remove = require("luarocks.remove")
 local cfg = require("luarocks.cfg")
+local rpm = require('luarocks.rpm')
 
 help_summary = "Build/compile a rock."
 help_arguments = "[--pack-binary-rock] [--keep] {<rockspec>|<rock>|<name> [<version>]}"
@@ -33,7 +34,7 @@ or the name of a rock to be fetched from a repository.
                     in the configuration file.
 
 --branch=<name>     Override the `source.branch` field in the loaded
-                    rockspec. Allows to specify a different branch to 
+                    rockspec. Allows to specify a different branch to
                     fetch. Particularly for SCM rocks.
 
 ]]..util.deps_mode_help()
@@ -50,7 +51,7 @@ or the name of a rock to be fetched from a repository.
 -- @param location string: The base directory files should be copied to.
 -- @param is_module_path boolean: True if string keys in files should be
 -- interpreted as dotted module paths.
--- @return boolean or (nil, string): True if succeeded or 
+-- @return boolean or (nil, string): True if succeeded or
 -- nil and an error message.
 local function install_files(files, location, is_module_path)
    assert(type(files) == "table" or not files)
@@ -104,9 +105,9 @@ end
 
 --- Applies patches inlined in the build.patches section
 -- and extracts files inlined in the build.extra_files section
--- of a rockspec. 
+-- of a rockspec.
 -- @param rockspec table: A rockspec table.
--- @return boolean or (nil, string): True if succeeded or 
+-- @return boolean or (nil, string): True if succeeded or
 -- nil and an error message.
 function apply_patches(rockspec)
    assert(type(rockspec) == "table")
@@ -207,14 +208,14 @@ function build_rockspec(rockspec_file, need_to_fetch, minimal_mode, deps_mode)
       end
       fs.change_dir(rockspec.source.dir)
    end
-   
+
    local dirs = {
       lua = { name = path.lua_dir(name, version), is_module_path = true },
       lib = { name = path.lib_dir(name, version), is_module_path = true },
       conf = { name = path.conf_dir(name, version), is_module_path = false },
       bin = { name = path.bin_dir(name, version), is_module_path = false },
    }
-   
+
    for _, d in pairs(dirs) do
       local ok, err = fs.make_dir(d.name)
       if not ok then return nil, err end
@@ -225,14 +226,14 @@ function build_rockspec(rockspec_file, need_to_fetch, minimal_mode, deps_mode)
    end)
 
    local build = rockspec.build
-   
+
    if not minimal_mode then
       ok, err = apply_patches(rockspec)
       if err then
          return nil, err
       end
    end
-   
+
    if build.type ~= "none" then
 
       -- Temporary compatibility
@@ -250,7 +251,7 @@ function build_rockspec(rockspec_file, need_to_fetch, minimal_mode, deps_mode)
       if not ok or not type(build_type) == "table" then
          return nil, "Failed initializing build back-end for build type '"..build.type.."': "..build_type
       end
-  
+
       ok, err = build_type.run(rockspec)
       if not ok then
          return nil, "Build error: " .. err
@@ -260,12 +261,12 @@ function build_rockspec(rockspec_file, need_to_fetch, minimal_mode, deps_mode)
    if build.install then
       for id, install_dir in pairs(dirs) do
          ok, err = install_files(build.install[id], install_dir.name, install_dir.is_module_path)
-         if not ok then 
+         if not ok then
             return nil, err
          end
       end
    end
-   
+
    local copy_directories = build.copy_directories
    local copying_default = false
    if not copy_directories then
@@ -286,17 +287,17 @@ function build_rockspec(rockspec_file, need_to_fetch, minimal_mode, deps_mode)
          end
       end
    end
-   
+
    if not any_docs then
       install_default_docs(name, version)
    end
-   
+
    for _, d in pairs(dirs) do
       fs.remove_dir_if_empty(d.name)
    end
 
    fs.pop_dir()
-   
+
    fs.copy(rockspec.local_filename, path.rockspec_file(name, version))
    if need_to_fetch then
       fs.pop_dir()
@@ -307,7 +308,7 @@ function build_rockspec(rockspec_file, need_to_fetch, minimal_mode, deps_mode)
 
    ok, err = repos.deploy_files(name, version, repos.should_wrap_bin_scripts(rockspec))
    if err then return nil, err end
-   
+
    util.remove_scheduled_function(rollback)
    rollback = util.schedule_function(function()
       repos.delete_version(name, version)
@@ -327,7 +328,7 @@ function build_rockspec(rockspec_file, need_to_fetch, minimal_mode, deps_mode)
    local root_dir = path.root_dir(cfg.rocks_dir)
    util.printout()
    util.printout(name.." "..version.." is now built and installed in "..root_dir.." "..license)
-   
+
    util.remove_scheduled_function(rollback)
    return name, version
 end
@@ -344,7 +345,7 @@ end
 function build_rock(rock_file, need_to_fetch, deps_mode)
    assert(type(rock_file) == "string")
    assert(type(need_to_fetch) == "boolean")
-  
+
    local unpack_dir, err, errcode = fetch.fetch_and_unpack_rock(rock_file)
    if not unpack_dir then
       return nil, err, errcode
@@ -356,7 +357,7 @@ function build_rock(rock_file, need_to_fetch, deps_mode)
    fs.pop_dir()
    return ok, err, errcode
 end
- 
+
 local function do_build(name, version, deps_mode)
    if name:match("%.rockspec$") then
       return build_rockspec(name, true, false, deps_mode)
@@ -397,10 +398,21 @@ function run(...)
       ok, err = do_build(name, version, deps.get_deps_mode(flags))
       if not ok then return nil, err end
       local name, version = ok, err
+      local RPM = ''
+      if flags["build-rpm"] then
+         RPM = RPM .. rpm.configure_files(name, version)
+      end
       if (not flags["keep"]) and not cfg.keep_other_versions then
          local ok, err = remove.remove_other_versions(name, version, flags["force"])
          if not ok then util.printerr(err) end
       end
+      if flags["build-rpm"] then
+         RPM = rpm.configure_header(fetch.load_rockspec(path.rockspec_file(name, version))) .. RPM
+         local f = io.open(name..'-'..version..'.rpm.spec', 'w')
+         f:write(RPM)
+         f:close()
+      end
+
       return name, version
    end
 end
