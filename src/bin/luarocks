@@ -1,6 +1,23 @@
 #!/usr/bin/env lua
-package.path = [[../?.lua;]]..package.path
 
+local function set_env_unixonly(self, sep)
+    local function string_split(self, sep)
+            local sep, fields = sep or ":", {}
+            local pattern = string.format("([^%s]+)", sep)
+            self:gsub(pattern, function(c) fields[#fields+1] = c end)
+            return fields
+    end
+
+    local path = debug.traceback()
+    path = string_split(string_split(path, "%s")[3], ':')[1]
+    path = path:gsub("/*$", ""):match("(.*)[/]+[^/]*") or ''
+    path = path:gsub("/*$", ""):match("(.*)[/]+[^/]*") or ''
+    path = path ..'/?.lua;'
+
+    package.path = path..package.path
+end
+
+set_env_unixonly(self, sep)
 
 local loader = require("luarocks.loader")
 local command_line = require("luarocks.command_line")

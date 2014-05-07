@@ -65,7 +65,7 @@ function run(rockspec)
    end
 
    if cfg.is_platform("mingw32") then
-      compile_object = function(object, source, defines, incdirs)
+      compile_object = function(object, source, c99, defines, incdirs)
          local extras = {}
          add_flags(extras, "-D%s", defines)
          add_flags(extras, "-I%s", incdirs)
@@ -97,7 +97,7 @@ function run(rockspec)
          return ok, wrapname
       end
    elseif cfg.is_platform("win32") then
-      compile_object = function(object, source, defines, incdirs)
+      compile_object = function(object, source, c99, defines, incdirs)
          local extras = {}
          add_flags(extras, "-D%s", defines)
          add_flags(extras, "-I%s", incdirs)
@@ -149,10 +149,13 @@ function run(rockspec)
          return ok, wrapname
       end
    else
-      compile_object = function(object, source, defines, incdirs)
+      compile_object = function(object, source, c99, defines, incdirs)
          local extras = {}
          add_flags(extras, "-D%s", defines)
          add_flags(extras, "-I%s", incdirs)
+         if c99 then
+            add_flags(extras, '%s', '-std=c99')
+         end
          return execute(variables.CC.." "..variables.CFLAGS, "-I"..variables.LUA_INCDIR, "-c", source, "-o", object, unpack(extras))
       end
       compile_library = function (library, objects, libraries, libdirs)
@@ -194,8 +197,8 @@ function run(rockspec)
        end
      end
    end
-   
-   
+
+
    for name, info in pairs(build.modules) do
       local moddir = path.module_to_path(name)
       if type(info) == "string" then
@@ -227,7 +230,7 @@ function run(rockspec)
             if not object then
                object = source.."."..cfg.obj_extension
             end
-            ok = compile_object(object, source, info.defines, info.incdirs)
+            ok = compile_object(object, source, build.c99, info.defines, info.incdirs)
             if not ok then
                return nil, "Failed compiling object "..object
             end

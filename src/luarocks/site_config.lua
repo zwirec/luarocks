@@ -1,7 +1,7 @@
 module("luarocks.site_config")
 
 LUAROCKS_PREFIX=[[/tmp/lrcks-tmp]]
-LUA_INCDIR=[[/usr/include/tarantool/1.6]]
+LUA_INCDIR=[[/usr/include/tarantool/]]
 LUA_LIBDIR=[[/usr/lib]]
 LUA_BINDIR=[[/usr/bin]]
 LUAROCKS_SYSCONFDIR=[[/tmp/luarocks-build-dir/usr/etc/luarocks]]

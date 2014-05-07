@@ -15,7 +15,7 @@ local manif = require("luarocks.manif")
 local search = require("luarocks.search")
 local remove = require("luarocks.remove")
 local cfg = require("luarocks.cfg")
-local rpm = require('luarocks.rpm')
+local bpack = require('luarocks.bpack')
 
 help_summary = "Build/compile a rock."
 help_arguments = "[--pack-binary-rock] [--keep] {<rockspec>|<rock>|<name> [<version>]}"
@@ -37,11 +37,15 @@ or the name of a rock to be fetched from a repository.
                     rockspec. Allows to specify a different branch to
                     fetch. Particularly for SCM rocks.
 
+--build-rpm         Build RPM package
+
+--build-deb         Build DEB package
+
 ]]..util.deps_mode_help()
 
 --- Install files to a given location.
 -- Takes a table where the array part is a list of filenames to be copied.
--- In the hash part, other keys, if is_module_path is set, are identifiers
+-- In the hash part, other keys, if is_module_path set, are identifiers
 -- in Lua module format, to indicate which subdirectory the file should be
 -- copied to. For example, install_files({["foo.bar"] = "src/bar.lua"}, "boo")
 -- will copy src/bar.lua to boo/foo.
@@ -389,7 +393,9 @@ function run(...)
       return nil, "Argument missing. "..util.see_help("build")
    end
    assert(type(version) == "string" or not version)
-
+   if flags["build-deb"] or flags["build-rpm"] then
+       bpack.check_prerequisites(flags)
+   end
    if flags["pack-binary-rock"] then
       return pack.pack_binary_rock(name, version, do_build, name, version, deps.get_deps_mode(flags))
    else
@@ -398,19 +404,18 @@ function run(...)
       ok, err = do_build(name, version, deps.get_deps_mode(flags))
       if not ok then return nil, err end
       local name, version = ok, err
-      local RPM = ''
-      if flags["build-rpm"] then
-         RPM = RPM .. rpm.configure_files(name, version)
+      local package_info = {}
+      if flags["build-rpm"] or flags["build-deb"] then
+         bpack.configure_files(name, version, package_info)
       end
       if (not flags["keep"]) and not cfg.keep_other_versions then
          local ok, err = remove.remove_other_versions(name, version, flags["force"])
          if not ok then util.printerr(err) end
       end
-      if flags["build-rpm"] then
-         RPM = rpm.configure_header(fetch.load_rockspec(path.rockspec_file(name, version))) .. RPM
-         local f = io.open(name..'-'..version..'.rpm.spec', 'w')
-         f:write(RPM)
-         f:close()
+      if flags["build-rpm"] or flags["build-deb"] then
+         bpack.configure_header(fetch.load_rockspec(path.rockspec_file(name, version)), nil, package_info)
+         bpack.rpm_spec_generate(package_info)
+         bpack.package_build(package_info, flags["build-deb"])
       end
 
       return name, version
