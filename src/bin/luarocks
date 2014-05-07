@@ -1,5 +1,6 @@
 #!/usr/bin/env lua
 
+
 local function set_env_unixonly(self, sep)
     local function string_split(self, sep)
             local sep, fields = sep or ":", {}
@@ -21,6 +22,9 @@ set_env_unixonly(self, sep)
 
 local loader = require("luarocks.loader")
 local command_line = require("luarocks.command_line")
+
+local cfg = require("luarocks.cfg")
+os.execute('mkdir -p ' .. cfg.site_config.LUAROCKS_ROCKS_TREE)
 
 program_description = "LuaRocks main command-line interface"
 
