@@ -18,6 +18,7 @@ Summary: __summary
 
 Group: Development/Libraries
 BuildRoot: __root
+BuildArch: __arch
 License: __license
 URL: __url
 
@@ -56,6 +57,22 @@ local function get_git_version(rockspec)
     return version
 end
 
+local function get_arch_dep(_cfg)
+    local arch_dep = false
+    for k, v in pairs(_cfg.file_list) do
+        if v[1]:match('%.so') ~= nil then
+            arch_dep = true
+            break
+        end
+    end
+    if arch_dep then
+        _cfg.arch = get_arch()
+    else
+        _cfg.arch = 'noarch'
+    end
+    return _cfg.arch
+end
+
 -- configure header
 function configure_header(rockspec, prefix, _cfg)
     _cfg.prefix = prefix or 'tarantool-'
@@ -82,7 +99,7 @@ function configure_header(rockspec, prefix, _cfg)
     _cfg.license = rockspec.description.license
     _cfg.url = rockspec.description.homepage
     _cfg.root = buildrootpath
-
+    get_arch_dep(_cfg)
 end
 
 local function generate_header(_cfg)
@@ -101,7 +118,7 @@ local function get_rpm_name(_cfg)
     return string_replace_format(path, {
         prefix = _cfg.prefix,
         name = _cfg.name,
-        arch = get_arch(),
+        arch = _cfg.arch, --  get_arch(),
         version = _cfg.version,
         release = _cfg.release,
     })
