@@ -224,17 +224,17 @@ function check_prerequisites(flags)
     end
     if flags["build-rpm"] or flags["build-deb"] then
         -- rpmbuild
-        if os.execute('rpmbuild --version > /dev/null') ~= 0 then
+        if not os.execute('rpmbuild --version > /dev/null') then
             error('`Rpmbuild` needed for building of RPM/DEB packages')
         end
     end
     if flags["build-deb"] then
         -- fakeroot
-        if os.execute('fakeroot --version > /dev/null') ~= 0 then
+        if not os.execute('fakeroot --version > /dev/null') then
             error('`Fakeroot` needed for building of DEB packages')
         end
         -- alien
-        if os.execute('alien --version > /dev/null') ~= 0 then
+        if not os.execute('alien --version > /dev/null') then
             error('`Alien` needed for build DEB packages')
         end
     end
