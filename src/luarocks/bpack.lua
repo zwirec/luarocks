@@ -57,6 +57,13 @@ local function get_git_version(rockspec)
     return version
 end
 
+local function get_arch()
+    local f = io.popen('rpmbuild --showrc | grep _build_arch', 'r'):read('*l')
+    local b = string_split(f, '%s')
+    return b[3]
+end
+
+
 local function get_arch_dep(_cfg)
     local arch_dep = false
     for k, v in pairs(_cfg.file_list) do
@@ -105,12 +112,6 @@ end
 local function generate_header(_cfg)
     _cfg.rpm_header = string_replace_format(rpm_mandatory, _cfg)
     return _cfg.rpm_header
-end
-
-local function get_arch()
-    local f = io.popen('rpmbuild --showrc | grep _build_arch', 'r'):read('*l')
-    local b = string_split(f, '%s')
-    return b[3]
 end
 
 local function get_rpm_name(_cfg)
