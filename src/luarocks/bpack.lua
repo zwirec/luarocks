@@ -52,7 +52,8 @@ local function get_git_version(rockspec)
         error('Cannot fetch GIT repo: '.. errcode)
     end
     local version = io.popen(
-        'cd '..dir.path(source_dir, ok)..'&& git describe --tags', 'r'):read('*l')
+        'cd '..dir.path(source_dir, ok)..'&& '..
+        'git describe --tags --always --long', 'r'):read('*l')
     os.execute('rm -rf '..source_dir)
     return version
 end
