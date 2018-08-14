@@ -3,6 +3,7 @@
 -- They are loaded into manifest tables, which are then used for
 -- performing searches, matching dependencies, etc.
 local manif = {}
+package.loaded["luarocks.manif"] = manif
 
 local core = require("luarocks.core.manif")
 local persist = require("luarocks.persist")
@@ -246,7 +247,7 @@ end
 function manif.get_versions(dep, deps_mode)
    assert(type(dep) == "table")
    assert(type(deps_mode) == "string")
-   
+
    local name = dep.name
    local namespace = dep.namespace
 

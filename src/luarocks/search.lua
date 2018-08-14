@@ -108,6 +108,14 @@ local function manifest_search(result_tree, repo, query, lua_version, is_local)
       repo = repo .. "/manifests/" .. query.namespace
    end
 
+   assert(type(query) == "table")
+
+   -- Prevent cyclic dependencies. When luarocks is compiled into tarantool
+   -- the require order must be specific. Some of the modules depend on
+   -- each other so such dependencies must be broken down this way.
+   local manif = require('luarocks.manif')
+
+   query_arch_as_table(query)
    local manifest, err, errcode = manif.load_manifest(repo, lua_version)
    if not manifest then
       return nil, err, errcode
@@ -294,7 +302,7 @@ function search.print_result_tree(result_tree, porcelain)
       end
       return
    end
-   
+
    for package, versions in util.sortedpairs(result_tree) do
       local namespaces = {}
       for version, repos in util.sortedpairs(versions, vers.compare_versions) do

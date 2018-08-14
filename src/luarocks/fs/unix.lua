@@ -205,4 +205,14 @@ function unix._unix_moderate_permissions(perms)
    return moderated_perms
 end
 
+local function load_fns(fs_table)
+   for name, fn in pairs(fs_table) do
+      if not fs[name] then
+         fs[name] = fn
+      end
+   end
+end
+
+load_fns(unix)
+
 return unix
