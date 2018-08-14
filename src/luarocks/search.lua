@@ -6,7 +6,6 @@ package.loaded["luarocks.search"] = search
 
 local dir = require("luarocks.dir")
 local path = require("luarocks.path")
-local manif = require("luarocks.manif")
 local deps = require("luarocks.deps")
 local cfg = require("luarocks.cfg")
 local util = require("luarocks.util")
@@ -176,7 +175,12 @@ function search.manifest_search(results, repo, query, lua_version)
    assert(type(results) == "table")
    assert(type(repo) == "string")
    assert(type(query) == "table")
-   
+
+   -- Prevent cyclic dependencies. When luarocks is compiled into tarantool
+   -- the require order must be specific. Some of the modules depend on
+   -- each other so such dependencies must be broken down this way.
+   local manif = require('luarocks.manif')
+
    query_arch_as_table(query)
    local manifest, err, errcode = manif.load_manifest(repo, lua_version)
    if not manifest then
