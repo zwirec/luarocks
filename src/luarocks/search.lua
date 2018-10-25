@@ -223,6 +223,18 @@ function search.search_repos(query, lua_version)
             end
          end
       end
+
+      -- stop searching repos if exact match was found
+      local query_version = nil
+      for _, constraint in pairs(query.constraints) do
+         if constraint.op == '==' then
+            query_version = constraint.version.string
+            break
+         end
+      end
+      if results[query.name] and results[query.name][query_version] ~= nil then
+         break
+      end
    end
    -- search through rocks in cfg.rocks_provided
    local provided_repo = "provided by VM or rocks_provided"
