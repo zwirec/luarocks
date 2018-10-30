@@ -204,6 +204,13 @@ end
 -- tables with fields "arch" and "repo".
 function search.search_repos(query, lua_version)
    assert(type(query) == "table")
+   local query_version = nil
+   for _, constraint in pairs(query.constraints) do
+      if constraint.op == '==' then
+         query_version = constraint.version.string
+         break
+      end
+   end
 
    local results = {}
    for _, repo in ipairs(cfg.rocks_servers) do
@@ -229,14 +236,8 @@ function search.search_repos(query, lua_version)
       end
 
       -- stop searching repos if exact match was found
-      local query_version = nil
-      for _, constraint in pairs(query.constraints) do
-         if constraint.op == '==' then
-            query_version = constraint.version.string
-            break
-         end
-      end
-      if results[query.name] and results[query.name][query_version] ~= nil then
+      local result = results[query.name]
+      if result and result[query_version] then
          break
       end
    end
