@@ -433,9 +433,11 @@ function cmd.run_command(description, commands, external_namespace, ...)
       os.exit(cmd.errorcodes.OK)
    end
 
-   for _, module_name in ipairs(fs.modules(external_namespace)) do
-      if not commands[module_name] then
-         commands[module_name] = external_namespace.."."..module_name
+   if external_namespace then
+      for _, module_name in ipairs(fs.modules(external_namespace)) do
+         if not commands[module_name] then
+            commands[module_name] = external_namespace.."."..module_name
+         end
       end
    end
 
