@@ -11,8 +11,6 @@ local fs = {}
 -- To avoid a loop when loading the other fs modules.
 package.loaded["luarocks.fs"] = fs
 
-local cfg = require("luarocks.core.cfg")
-
 local pack = table.pack or function(...) return { n = select("#", ...), ... } end
 local unpack = table.unpack or unpack
 
@@ -45,6 +43,20 @@ do
          end
          return unpack(code, 1, code.n)
       end
+   end
+end
+
+do
+   function fs.init()
+      if fs.current_dir then
+         -- already initialized
+         return
+      end
+
+      require("luarocks.fs.unix")
+      require("luarocks.fs.unix.tools")
+      require("luarocks.fs.lua")
+      require("luarocks.fs.tools")
    end
 end
 

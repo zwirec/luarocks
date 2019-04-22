@@ -31,6 +31,8 @@ end
 
 local postprocess_dependencies
 do
+   cfg.init()
+   fs.init()
    local postprocess_check = setmetatable({}, { __mode = "k" })
    postprocess_dependencies = function(manifest)
       if postprocess_check[manifest] then

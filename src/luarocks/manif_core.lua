@@ -5,7 +5,7 @@ local manif_core = {}
 package.loaded["luarocks.manif_core"] = manif_core
 
 local persist = require("luarocks.persist")
-local cfg = require("luarocks.cfg")
+local cfg = require("luarocks.core.cfg")
 local dir = require("luarocks.dir")
 local util = require("luarocks.util")
 local path = require("luarocks.path")

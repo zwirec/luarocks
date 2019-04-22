@@ -34,7 +34,7 @@ function build.opts(opts)
       if not valid_opts[k] then
          error("invalid build option: "..k)
       end
-      local vo, optional = valid_opts[k]:match("^(.-)(%??)$")
+      local vo, optional = valid_opts[k]:match('^(.-)(%?-)$')
       if not (tv == vo or (optional == "?" and tv == nil)) then
          error("invalid type build option: "..k.." - got "..tv..", expected "..vo)
       end

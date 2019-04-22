@@ -115,7 +115,6 @@ local function manifest_search(result_tree, repo, query, lua_version, is_local)
    -- each other so such dependencies must be broken down this way.
    local manif = require('luarocks.manif')
 
-   query_arch_as_table(query)
    local manifest, err, errcode = manif.load_manifest(repo, lua_version)
    if not manifest then
       return nil, err, errcode
