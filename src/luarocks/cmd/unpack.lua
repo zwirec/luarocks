@@ -72,7 +72,7 @@ local function unpack_rock(rock_file, dir_name, kind)
    end
    if kind == "src" then
       if rockspec.source.file then
-         local ok, err = fs.unpack_archive(rockspec.source.file)
+         local ok, err = fs.unpack_archive(rockspec.source.file, dir_name)
          if not ok then
             return nil, err
          end

@@ -1088,7 +1088,7 @@ end
 -- filename extension.
 -- @param archive string: Filename of archive.
 -- @return boolean or (boolean, string): true on success, false and an error message on failure.
-function fs_lua.unpack_archive(archive)
+function fs_lua.unpack_archive(archive, destdir)
    assert(type(archive) == "string")
 
    local ok, err
@@ -1097,19 +1097,19 @@ function fs_lua.unpack_archive(archive)
       local tar_filename = archive:gsub("%.gz$", "")
       ok, err = fs.gunzip(archive, tar_filename)
       if ok then
-         ok, err = tar.untar(tar_filename, ".")
+         ok, err = tar.untar(tar_filename, destdir or ".")
       end
    elseif archive:match("%.tgz$") then
       local tar_filename = archive:gsub("%.tgz$", ".tar")
       ok, err = fs.gunzip(archive, tar_filename)
       if ok then
-         ok, err = tar.untar(tar_filename, ".")
+         ok, err = tar.untar(tar_filename, destdir or ".")
       end
    elseif archive:match("%.tar%.bz2$") then
       local tar_filename = archive:gsub("%.bz2$", "")
       ok, err = fs.bunzip2(archive, tar_filename)
       if ok then
-         ok, err = tar.untar(tar_filename, ".")
+         ok, err = tar.untar(tar_filename, destdir or ".")
       end
    elseif archive:match("%.zip$") then
       ok, err = fs.unzip(archive)

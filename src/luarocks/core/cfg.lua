@@ -176,29 +176,29 @@ end
 
 --------------------------------------------------------------------------------
 
-local function make_defaults(lua_version, target_cpu, platforms, home)
+local function make_defaults(lua_version, target_cpu, platforms, home, hardcoded)
 
    -- Configure defaults:
    local defaults = {
 
-      lua_interpreter = "lua",
-      local_by_default = false,
+      lua_interpreter = hardcoded.LUA_INTERPRETER or "lua",
+      local_by_default = hardcoded.LOCAL_BY_DEFAULT or false,
       accept_unknown_fields = false,
       fs_use_modules = true,
       hooks_enabled = true,
       deps_mode = "one",
       check_certificates = false,
 
-      lua_modules_path = "/share/lua/"..lua_version,
-      lib_modules_path = "/lib/lua/"..lua_version,
-      rocks_subdir = "/lib/luarocks/rocks-"..lua_version,
+      lua_modules_path = hardcoded.LUA_MODULES_LUA_SUBDIR or "/share/lua/"..lua_version,
+      lib_modules_path = hardcoded.LUA_MODULES_LIB_SUBDIR or "/lib/lua/"..lua_version,
+      rocks_subdir = hardcoded.ROCKS_SUBDIR or "/lib/luarocks/rocks-"..lua_version,
 
       arch = "unknown",
       lib_extension = "unknown",
       obj_extension = "unknown",
       link_lua_explicitly = false,
 
-      rocks_servers = {
+      rocks_servers = hardcoded.ROCKS_SERVERS or {
          {
            "https://luarocks.org",
            "https://raw.githubusercontent.com/rocks-moonscript-org/moonrocks-mirror/master/",
@@ -269,12 +269,12 @@ local function make_defaults(lua_version, target_cpu, platforms, home)
          WGETNOCERTFLAG = "",
       },
 
-      external_deps_subdirs = {
+      external_deps_subdirs = hardcoded.EXTERNAL_DEPS_SUBDIRS or {
          bin = "bin",
          lib = "lib",
          include = "include"
       },
-      runtime_external_deps_subdirs = {
+      runtime_external_deps_subdirs = hardcoded.RUNTIME_EXTERNAL_DEPS_SUBDIRS or {
          bin = "bin",
          lib = "lib",
          include = "include"
@@ -566,7 +566,7 @@ function cfg.init(lua_data, project_dir, warning)
    if not hc_ok then
       hardcoded = {}
    end
-
+   local arg = rawget(_G, 'arg')
    local lua_version = lua_data.lua_version or hardcoded.LUA_VERSION or _VERSION:sub(5)
    local luajit_version = lua_data.luajit_version or hardcoded.LUAJIT_VERSION or (jit and jit.version:sub(8))
    local lua_interpreter = lua_data.lua_interpreter or hardcoded.LUA_INTERPRETER or (arg and arg[-1] and arg[-1]:gsub(".*[\\/]", "")) or (is_windows and "lua.exe" or "lua")
@@ -574,7 +574,7 @@ function cfg.init(lua_data, project_dir, warning)
    local lua_incdir = lua_data.lua_incdir or hardcoded.LUA_INCDIR
    local lua_libdir = lua_data.lua_libdir or hardcoded.LUA_LIBDIR
    local lua_dir = lua_data.lua_dir or hardcoded.LUA_DIR
-   
+
    local init = cfg.init
 
    ----------------------------------------
@@ -726,7 +726,7 @@ function cfg.init(lua_data, project_dir, warning)
       end
    end
 
-   local defaults = make_defaults(lua_version, processor, platforms, cfg.home)
+   local defaults = make_defaults(lua_version, processor, platforms, cfg.home, hardcoded)
 
    if platforms.windows and hardcoded.WIN_TOOLS then
       local tools = { "SEVENZ", "CP", "FIND", "LS", "MD5SUM", "PWD", "RMDIR", "TEST", "WGET", "MKDIR" }
