@@ -132,9 +132,12 @@ end
 local function call_other_loaders(module, name, version, module_name)
    for _, a_loader in ipairs(loaders) do
       if a_loader ~= loader.luarocks_loader then
-         local results = { a_loader(module_name) }
-         if type(results[1]) == "function" then
-            return unpack(results)
+         local ok, result = pcall(a_loader, module_name)
+         if ok then
+            local results = { result }
+            if type(results[1]) == "function" then
+               return unpack(results)
+            end
          end
       end
    end
