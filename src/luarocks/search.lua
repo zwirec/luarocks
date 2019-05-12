@@ -61,13 +61,13 @@ function search.disk_search(repo, query, result_tree)
    assert(type(repo) == "string")
    assert(query:type() == "query")
    assert(type(result_tree) == "table" or not result_tree)
-   
+
    local fs = require("luarocks.fs")
-     
+
    if not result_tree then
       result_tree = {}
    end
-   
+
    for name in fs.dir(repo) do
       local pathname = dir.path(repo, name)
       local rname, rversion, rarch = path.parse_name(name)
@@ -147,6 +147,13 @@ end
 -- tables with fields "arch" and "repo".
 function search.search_repos(query, lua_version)
    assert(query:type() == "query")
+   local query_version = nil
+   for _, constraint in pairs(query.constraints) do
+      if constraint.op == '==' then
+       query_version = constraint.version.string
+       break
+      end
+   end
 
    local result_tree = {}
    for _, repo in ipairs(cfg.rocks_servers) do
@@ -156,10 +163,14 @@ function search.search_repos(query, lua_version)
          end
          for _, mirror in ipairs(repo) do
             local protocol, pathname = dir.split_url(mirror)
+            local ok, err, errcode
             if protocol == "file" then
                mirror = pathname
+               --print(('result_tree: %s, mirror: %s, query: %s, lua_version: %s'):format(require('json').encode(result_tree), mirror, require('json').encode(query), lua_version))
+               ok, err, errcode = search.local_manifest_search(result_tree, mirror, query, lua_version)
+            else
+               ok, err, errcode = remote_manifest_search(result_tree, mirror, query, lua_version)
             end
-            local ok, err, errcode = remote_manifest_search(result_tree, mirror, query, lua_version)
             if errcode == "network" then
                cfg.disabled_servers[repo] = true
             end
@@ -170,7 +181,13 @@ function search.search_repos(query, lua_version)
             end
          end
       end
+
+      -- stop searching repos if exact match was found
+      if result_tree and result_tree[query.name] and query_version and result_tree[query.name][query_version] then
+         break
+      end
    end
+
    -- search through rocks in cfg.rocks_provided
    local provided_repo = "provided by VM or rocks_provided"
    for name, version in pairs(cfg.rocks_provided) do
@@ -243,7 +260,7 @@ end
 -- of the rock if it was found, or nil followed by an error message.
 function search.find_suitable_rock(query)
    assert(query:type() == "query")
-   
+
    local result_tree = search.search_repos(query)
    local first_rock = next(result_tree)
    if not first_rock then
@@ -289,7 +306,7 @@ end
 function search.print_result_tree(result_tree, porcelain)
    assert(type(result_tree) == "table")
    assert(type(porcelain) == "boolean" or not porcelain)
-   
+
    if porcelain then
       for package, versions in util.sortedpairs(result_tree) do
          for version, repos in util.sortedpairs(versions, vers.compare_versions) do
