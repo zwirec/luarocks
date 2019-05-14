@@ -32,14 +32,22 @@ function command.run_tests(test, args)
       end
    end
    
+   local ok, err
+
    if test.script then
       if not fs.exists(test.script) then
          return nil, "Test script " .. test.script .. " does not exist"
       end
       local lua = fs.Q(dir.path(cfg.variables["LUA_BINDIR"], cfg.lua_interpreter))  -- get lua interpreter configured
-      return fs.execute(lua, test.script, unpack(args))
+      ok, err = fs.execute(lua, test.script, unpack(args))
    elseif test.command then
-      return fs.execute(test.command, unpack(args))
+      ok, err = fs.execute(test.command, unpack(args))
+   end
+
+   if ok then
+      return true
+   else
+      return nil, err or "tests failed."
    end
 end
 
