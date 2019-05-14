@@ -119,11 +119,6 @@ local function process_dependencies(rockspec, opts)
       end
    end
 
-   local ok, err, errcode = deps.check_lua(rockspec.variables)
-   if not ok then
-      return nil, err, errcode
-   end
-
    if opts.deps_mode == "none" then
       util.warning("skipping dependency checks.")
       return true
